@@ -1,0 +1,406 @@
+[package]
+name = "crate-name"
+version = "0.1.0"
+edition = "2024"
+
+description = ""
+# documentation = "https://docs.rs/crate-name"
+# homepage = ""
+license = "MIT"
+readme = "./README.md"
+repository = ""
+
+categories = []
+keywords = []
+
+include = [
+  "Cargo.toml",
+  "LICENSE*",
+  "README.md",
+  "benches/**",
+  "examples/**",
+  "src/**",
+  "tests/**",
+]
+
+# Prevent accidental publishing for private/internal crates.
+# publish = false
+
+# Only needed when using native linking / sys crates.
+# links = "native-library-name"
+
+# Cargo auto-detects build.rs by default.
+# Use `build = false` to disable auto-detection, or a custom path if needed.
+# build = "build.rs"
+
+# Optional cargo/tool metadata.
+# [package.metadata]
+
+
+# =============================================================================
+# Lints
+# =============================================================================
+
+[lints.clippy]
+
+# Lint groups
+all = { level = "warn", priority = -1 }
+cargo = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+
+# Deny
+await_holding_lock = "deny"
+await_holding_refcell_ref = "deny"
+clone_on_ref_ptr = "deny"
+dbg_macro = "deny"
+expect_used = "deny"
+fn_to_numeric_cast_any = "deny"
+implicit_clone = "deny"
+items_after_statements = "deny"
+items_after_test_module = "deny"
+missing_safety_doc = "deny"
+needless_for_each = "deny"
+semicolon_if_nothing_returned = "deny"
+str_to_string = "deny"
+transmute_ptr_to_ptr = "deny"
+undocumented_unsafe_blocks = "deny"
+unnecessary_mut_passed = "deny"
+unnecessary_sort_by = "deny"
+unused_async = "deny"
+unwrap_used = "deny"
+
+# Warn
+cast_possible_truncation = "warn"
+cast_possible_wrap = "warn"
+cast_precision_loss = "warn"
+cast_ptr_alignment = "warn"
+cast_sign_loss = "warn"
+doc_markdown = "warn"
+fn_params_excessive_bools = "warn"
+large_futures = "warn"
+large_stack_arrays = "warn"
+large_types_passed_by_value = "warn"
+manual_let_else = "warn"
+many_single_char_names = "warn"
+match_same_arms = "warn"
+mutex_atomic = "warn"
+print_stderr = "warn"
+print_stdout = "warn"
+rc_mutex = "warn"
+struct_excessive_bools = "warn"
+todo = "warn"
+too_many_arguments = "warn"
+trivially_copy_pass_by_ref = "warn"
+unimplemented = "warn"
+unnecessary_wraps = "warn"
+unreadable_literal = "warn"
+unused_self = "warn"
+
+# Allow
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+multiple_crate_versions = "allow"
+must_use_candidate = "allow"
+similar_names = "allow"
+struct_field_names = "allow"
+too_many_lines = "allow"
+used_underscore_binding = "allow"
+
+[lints.rust]
+
+# Deny
+unsafe_op_in_unsafe_fn = "deny"
+unused_must_use = "deny"
+
+# Warn
+missing_debug_implementations = "warn"
+unreachable_pub = "warn"
+
+# Allow
+missing_docs = "allow"
+
+[lints.rustdoc]
+
+# Deny
+broken_intra_doc_links = "deny"
+
+# Warn
+private_intra_doc_links = "warn"
+
+# Allow
+missing_crate_level_docs = "allow"
+
+# =============================================================================
+# Features
+# =============================================================================
+
+[features]
+default = []
+
+# Convenience aliases.
+all = []
+full = ["all"]
+
+# Example:
+# serde = ["dep:serde"]
+# cli = ["dep:clap"]
+# async = ["dep:tokio"]
+
+# Define features here.
+
+
+# =============================================================================
+# Dependencies
+# =============================================================================
+
+[dependencies]
+
+# -----------------------------------------------------------------------------
+# OS / family-specific dependencies
+# -----------------------------------------------------------------------------
+
+# Applies to Linux, macOS, BSD, Android, iOS, etc.
+[target.'cfg(unix)'.dependencies]
+
+
+[target.'cfg(windows)'.dependencies]
+
+
+# Linux-only deps.
+[target.'cfg(target_os = "linux")'.dependencies]
+
+
+# macOS-only deps.
+[target.'cfg(target_os = "macos")'.dependencies]
+
+
+# Windows-only deps. Usually same as cfg(windows), but kept explicit for template clarity.
+[target.'cfg(target_os = "windows")'.dependencies]
+
+
+[target.'cfg(target_family = "wasm")'.dependencies]
+
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+
+# -----------------------------------------------------------------------------
+# Target cfg / ABI-specific dependencies
+# -----------------------------------------------------------------------------
+
+# Linux GNU / glibc only.
+[target.'cfg(all(target_os = "linux", target_env = "gnu"))'.dependencies]
+
+
+# Linux musl only.
+[target.'cfg(all(target_os = "linux", target_env = "musl"))'.dependencies]
+
+
+# Windows MSVC only.
+[target.'cfg(all(target_os = "windows", target_env = "msvc"))'.dependencies]
+
+
+# Windows GNU only.
+[target.'cfg(all(target_os = "windows", target_env = "gnu"))'.dependencies]
+
+
+# macOS Intel only.
+[target.'cfg(all(target_os = "macos", target_arch = "x86_64"))'.dependencies]
+
+
+# macOS Apple Silicon only.
+[target.'cfg(all(target_os = "macos", target_arch = "aarch64"))'.dependencies]
+
+
+# Custom sections for exact target triples or custom target cfgs.
+# Examples:
+# [target.'aarch64-unknown-linux-musl'.dependencies]
+# [target.'aarch64-apple-ios'.dependencies]
+# [target.'aarch64-linux-android'.dependencies]
+# [target.'wasm32-unknown-unknown'.dependencies]
+# [target.'cfg(all(target_os = "linux", target_env = "musl"))'.dependencies]
+# [target.'cfg(all(target_vendor = "apple", target_arch = "aarch64"))'.dependencies]
+
+# =============================================================================
+# Build dependencies
+# =============================================================================
+
+# Build-script-only dependencies.
+[build-dependencies]
+
+
+# -----------------------------------------------------------------------------
+# Target-specific build dependencies
+# -----------------------------------------------------------------------------
+
+# Unix build-script deps.
+[target.'cfg(unix)'.build-dependencies]
+
+
+# Windows build-script deps.
+[target.'cfg(windows)'.build-dependencies]
+
+
+# Linux build-script deps.
+[target.'cfg(target_os = "linux")'.build-dependencies]
+
+
+# macOS build-script deps.
+[target.'cfg(target_os = "macos")'.build-dependencies]
+
+
+# Windows build-script deps.
+[target.'cfg(target_os = "windows")'.build-dependencies]
+
+
+# WASM build-script deps.
+[target.'cfg(target_family = "wasm")'.build-dependencies]
+
+
+# wasm32 build-script deps.
+[target.'cfg(target_arch = "wasm32")'.build-dependencies]
+
+
+# Custom sections for exact target triples or custom target cfgs.
+# Examples:
+# [target.'aarch64-unknown-linux-musl'.build-dependencies]
+# [target.'aarch64-apple-ios'.build-dependencies]
+# [target.'aarch64-linux-android'.build-dependencies]
+# [target.'wasm32-unknown-unknown'.build-dependencies]
+# [target.'cfg(all(target_os = "linux", target_env = "musl"))'.build-dependencies]
+# [target.'cfg(all(target_vendor = "apple", target_arch = "aarch64"))'.build-dependencies]
+
+# =============================================================================
+# Development dependencies
+# =============================================================================
+
+# Test/example/bench-only dependencies.
+[dev-dependencies]
+
+
+# -----------------------------------------------------------------------------
+# Target-specific development dependencies
+# -----------------------------------------------------------------------------
+
+# Unix-only test deps.
+[target.'cfg(unix)'.dev-dependencies]
+
+
+# Windows-only test deps.
+[target.'cfg(windows)'.dev-dependencies]
+
+
+# Linux-only test deps.
+[target.'cfg(target_os = "linux")'.dev-dependencies]
+
+
+# macOS-only test deps.
+[target.'cfg(target_os = "macos")'.dev-dependencies]
+
+
+# Windows-only test deps.
+[target.'cfg(target_os = "windows")'.dev-dependencies]
+
+
+# WASM-only test deps.
+[target.'cfg(target_family = "wasm")'.dev-dependencies]
+
+
+# wasm32-only test deps.
+[target.'cfg(target_arch = "wasm32")'.dev-dependencies]
+
+
+# Custom sections for exact target triples or custom target cfgs.
+# Examples:
+# [target.'aarch64-unknown-linux-musl'.dev-dependencies]
+# [target.'aarch64-apple-ios'.dev-dependencies]
+# [target.'aarch64-linux-android'.dev-dependencies]
+# [target.'wasm32-unknown-unknown'.dev-dependencies]
+# [target.'cfg(all(target_os = "linux", target_env = "musl"))'.dev-dependencies]
+# [target.'cfg(all(target_vendor = "apple", target_arch = "aarch64"))'.dev-dependencies]
+
+# =============================================================================
+# Library / binary / examples / tests / benches
+# =============================================================================
+
+# Usually not needed if using the default `src/lib.rs`.
+# [lib]
+# name = "crate_name"
+# path = "src/lib.rs"
+# crate-type = ["lib"]
+# doctest = true
+
+# Usually not needed if using the default `src/main.rs`.
+# [[bin]]
+# name = "crate-name"
+# path = "src/main.rs"
+# required-features = []
+
+# [[example]]
+# name = "example-name"
+# path = "examples/example-name.rs"
+# required-features = []
+
+# Usually auto-discovered from `tests/*.rs`.
+# [[test]]
+# name = "integration"
+# path = "tests/integration.rs"
+# required-features = []
+
+# [[bench]]
+# name = "benchmark-name"
+# path = "benches/benchmark-name.rs"
+# harness = false
+# required-features = []
+
+# =============================================================================
+# Profiles
+# =============================================================================
+# Profiles are effective here because this is the package root.
+# For workspaces, define profiles only at the workspace root.
+
+# [profile.dev]
+# opt-level = 0
+# debug = true
+# incremental = true
+# overflow-checks = true
+
+[profile.release]
+codegen-units = 1
+debug = false
+incremental = false
+lto = "fat"
+opt-level = 3
+overflow-checks = true
+panic = "abort"
+strip = "symbols"
+
+# Faster release build, slightly less optimized than full LTO.
+# [profile.release-fast]
+# inherits = "release"
+# lto = "thin"
+# codegen-units = 16
+
+# Smaller binary profile.
+# [profile.release-small]
+# inherits = "release"
+# opt-level = "z"
+# lto = true
+# codegen-units = 1
+# panic = "abort"
+# strip = "symbols"
+
+# [profile.test]
+# opt-level = 0
+# debug = true
+
+# [profile.bench]
+# inherits = "release"
+# debug = true
+
+# =============================================================================
+# Dependency overrides
+# =============================================================================
+# For workspaces, prefer defining patches at the workspace root.
+
+# [patch.crates-io]
+# crate-name = { git = "https://github.com/owner/crate-name", branch = "main" }
