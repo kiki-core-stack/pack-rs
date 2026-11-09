@@ -1,5 +1,5 @@
 [mordant]
 disabled = [
   # Uncomment it if this is a lib crate
-  # "unused_pub",
+  "unused_pub",
 ]

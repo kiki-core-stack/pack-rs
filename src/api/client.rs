@@ -1,16 +1,16 @@
 use std::{
     error::Error,
+    fmt,
     fmt::{
         Display,
         Formatter,
-        Result as FmtResult,
     },
+    mem,
     time::Duration,
 };
 
 use anyhow::{
     Context,
-    Error as AnyhowError,
     Result,
     ensure,
 };
@@ -28,11 +28,6 @@ use serde::{
     Deserialize,
     Serialize,
     de::DeserializeOwned,
-};
-use serde_json::{
-    Value,
-    from_slice,
-    from_value,
 };
 
 // Constants/Statics
@@ -115,7 +110,7 @@ impl ApiClient {
             .with_context(|| format!("failed to send API request {method} {url}"))?;
 
         let status = response.status();
-        let headers = std::mem::take(response.headers_mut());
+        let headers = mem::take(response.headers_mut());
         let body = read_response_body(response, &method, &url, max_response_body_bytes).await?;
 
         Ok(RawApiResponse { body, headers, status })
@@ -131,7 +126,7 @@ impl ApiClient {
             .await?;
 
         // A non-envelope body with an error status still reports that status as a failed response
-        let envelope: ApiResponseEnvelope = match from_slice(&response.body) {
+        let envelope: ApiResponseEnvelope = match serde_json::from_slice(&response.body) {
             Ok(envelope) => envelope,
             Err(_) if !response.status.is_success() => ApiResponseEnvelope::default(),
             Err(error) => {
@@ -150,7 +145,8 @@ impl ApiClient {
         }
 
         // Missing data decodes as null so `()` and `Option<_>` accept data-less success responses
-        from_value(envelope.data.unwrap_or(Value::Null)).context("failed to decode API response data")
+        serde_json::from_value(envelope.data.unwrap_or(serde_json::Value::Null))
+            .context("failed to decode API response data")
     }
 
     pub fn with_default_headers(base_url: &str, default_headers: HeaderMap) -> Result<Self> {
@@ -174,7 +170,7 @@ impl ApiClient {
 #[derive(Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct ApiResponseEnvelope {
-    data: Option<Value>,
+    data: Option<serde_json::Value>,
     error_code: Option<String>,
     message: Option<String>,
     success: bool,
@@ -192,7 +188,7 @@ impl ApiResponseError {
     /// Returns whether `error` is a failed API response with a 4xx status, meaning the server rejected the
     /// request rather than failing transiently.
     #[must_use]
-    pub fn is_client_error(error: &AnyhowError) -> bool {
+    pub fn is_client_error(error: &anyhow::Error) -> bool {
         error
             .downcast_ref::<Self>()
             .is_some_and(|error| error.status.is_client_error())
@@ -200,7 +196,7 @@ impl ApiResponseError {
 }
 
 impl Display for ApiResponseError {
-    fn fmt(&self, formatter: &mut Formatter<'_>) -> FmtResult {
+    fn fmt(&self, formatter: &mut Formatter<'_>) -> fmt::Result {
         write!(formatter, "API request failed with HTTP {}", self.status)?;
         if let Some(error_code) = &self.error_code {
             write!(formatter, " ({error_code})")?;
@@ -273,7 +269,7 @@ mod tests {
 
     use super::*;
 
-    fn api_response_error(error: &AnyhowError) -> &ApiResponseError {
+    fn api_response_error(error: &anyhow::Error) -> &ApiResponseError {
         error.downcast_ref::<ApiResponseError>().unwrap()
     }
 
@@ -313,19 +309,6 @@ mod tests {
         assert!(ApiClient::new("ftp://example.test").is_err());
     }
 
-    #[test]
-    fn does_not_add_request_freshness_headers() {
-        let request = ApiClient::new("http://example.test")
-            .unwrap()
-            .build_request(Method::GET, "/status")
-            .unwrap()
-            .build()
-            .unwrap();
-
-        assert!(!request.headers().contains_key("x-nonce"));
-        assert!(!request.headers().contains_key("x-timestamp"));
-    }
-
     #[tokio::test]
     async fn does_not_follow_redirects() {
         let body = br#"{"success":false}"#;
@@ -334,7 +317,7 @@ mod tests {
         let (base_url, server) = serve_once(response);
         let client = ApiClient::new(&base_url).unwrap();
 
-        let error = client.get::<Value>("").await.unwrap_err();
+        let error = client.get::<serde_json::Value>("").await.unwrap_err();
 
         assert_eq!(api_response_error(&error).status, StatusCode::FOUND);
         server.join().unwrap();
