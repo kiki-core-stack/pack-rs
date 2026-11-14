@@ -43,6 +43,8 @@ pub struct ApiClient {
 }
 
 impl ApiClient {
+    /// Creates a client for an API origin (e.g. `http://127.0.0.1:8080`); request paths are absolute, such as
+    /// `/api/services/...`.
     pub fn new(base_url: &str) -> Result<Self> {
         Self::with_default_headers(base_url, HeaderMap::new())
     }
@@ -136,12 +138,7 @@ impl ApiClient {
         };
 
         if !envelope.success {
-            return Err(ApiResponseError {
-                error_code: envelope.error_code,
-                message: envelope.message,
-                status: response.status,
-            }
-            .into());
+            return Err(ApiResponseError::from_envelope(envelope, response.status).into());
         }
 
         // Missing data decodes as null so `()` and `Option<_>` accept data-less success responses
@@ -167,32 +164,35 @@ impl ApiClient {
     }
 }
 
+/// The API envelope: `{ success: true, data? }` or
+/// `{ success: false, errorCode, errorData?, message, requestId? }`.
 #[derive(Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct ApiResponseEnvelope {
     data: Option<serde_json::Value>,
     error_code: Option<String>,
+    error_data: Option<serde_json::Value>,
     message: Option<String>,
+    request_id: Option<String>,
     success: bool,
 }
 
-/// A failed API response, either a `success: false` envelope or a non-success HTTP status.
+/// A failed API response, either a `success: false` envelope or a non-success HTTP status whose body is not an
+/// envelope (e.g. a proxy error page), in which case every field except `status` is `None`.
 #[derive(Debug)]
 pub struct ApiResponseError {
+    /// Error code to branch on, e.g. `notFound`.
     pub error_code: Option<String>,
-    pub message: Option<String>,
-    pub status: StatusCode,
-}
 
-impl ApiResponseError {
-    /// Returns whether `error` is a failed API response with a 4xx status, meaning the server rejected the
-    /// request rather than failing transiently.
-    #[must_use]
-    pub fn is_client_error(error: &anyhow::Error) -> bool {
-        error
-            .downcast_ref::<Self>()
-            .is_some_and(|error| error.status.is_client_error())
-    }
+    /// Structured details of the error, e.g. the issues of `validationFailed`.
+    pub error_data: Option<serde_json::Value>,
+
+    /// Message localized by the server from the request's `accept-language`; for logs and display only.
+    pub message: Option<String>,
+
+    /// Server-side request ID for correlating logs.
+    pub request_id: Option<String>,
+    pub status: StatusCode,
 }
 
 impl Display for ApiResponseError {
@@ -206,17 +206,66 @@ impl Display for ApiResponseError {
             write!(formatter, ": {message}")?;
         }
 
+        if let Some(request_id) = &self.request_id {
+            write!(formatter, " [request ID: {request_id}]")?;
+        }
+
         Ok(())
     }
 }
 
 impl Error for ApiResponseError {}
 
+impl ApiResponseError {
+    // Private methods
+    fn from_envelope(envelope: ApiResponseEnvelope, status: StatusCode) -> Self {
+        Self {
+            error_code: envelope.error_code,
+            error_data: envelope.error_data,
+            message: envelope.message,
+            request_id: envelope.request_id,
+            status,
+        }
+    }
+
+    // Public methods
+
+    /// Returns whether `error` is a failed API response with the given error code.
+    #[must_use]
+    pub fn has_error_code(error: &anyhow::Error, error_code: &str) -> bool {
+        error
+            .downcast_ref::<Self>()
+            .is_some_and(|error| error.error_code.as_deref() == Some(error_code))
+    }
+
+    /// Returns whether `error` is a failed API response with a 4xx status, meaning the server rejected the
+    /// request rather than failing transiently.
+    #[must_use]
+    pub fn is_client_error(error: &anyhow::Error) -> bool {
+        error
+            .downcast_ref::<Self>()
+            .is_some_and(|error| error.status.is_client_error())
+    }
+}
+
 #[derive(Debug)]
 pub struct RawApiResponse {
     pub body: Vec<u8>,
     pub headers: HeaderMap,
     pub status: StatusCode,
+}
+
+impl RawApiResponse {
+    /// Returns the response when its HTTP status is a success; otherwise an [`ApiResponseError`] read from the
+    /// body's envelope (only `status` is set when the body is not one).
+    pub fn error_for_status(self) -> Result<Self> {
+        if self.status.is_success() {
+            return Ok(self);
+        }
+
+        let envelope = serde_json::from_slice(&self.body).unwrap_or_default();
+        Err(ApiResponseError::from_envelope(envelope, self.status).into())
+    }
 }
 
 // Functions
@@ -359,7 +408,7 @@ mod tests {
 
     #[tokio::test]
     async fn returns_failed_api_envelope_as_api_response_error() {
-        let body = br#"{"data":{"field":"name"},"errorCode":"notFound","message":"missing","success":false}"#;
+        let body = br#"{"errorCode":"notFound","errorData":{"field":"name"},"message":"missing","requestId":"abc","success":false}"#;
         let response = http_response("404 Not Found", &[], body);
 
         let (base_url, server) = serve_once(response);
@@ -370,7 +419,14 @@ mod tests {
 
         assert_eq!(api_response_error.status, StatusCode::NOT_FOUND);
         assert_eq!(api_response_error.error_code.as_deref(), Some("notFound"));
+        assert_eq!(
+            api_response_error.error_data,
+            Some(serde_json::json!({ "field": "name" }))
+        );
+
         assert_eq!(api_response_error.message.as_deref(), Some("missing"));
+        assert_eq!(api_response_error.request_id.as_deref(), Some("abc"));
+        assert!(ApiResponseError::has_error_code(&error, "notFound"));
         assert!(ApiResponseError::is_client_error(&error));
         server.join().unwrap();
     }
@@ -421,6 +477,25 @@ mod tests {
         assert_eq!(response.status, StatusCode::PARTIAL_CONTENT);
         assert_eq!(response.headers.get("x-artifact-version").unwrap(), "7");
         assert_eq!(response.body, body);
+        server.join().unwrap();
+    }
+
+    #[tokio::test]
+    async fn raw_response_error_for_status_reads_failed_envelope() {
+        let body = br#"{"errorCode":"notFound","message":"missing","success":false}"#;
+        let response = http_response("404 Not Found", &[], body);
+
+        let (base_url, server) = serve_once(response);
+        let client = ApiClient::new(&base_url).unwrap();
+        let error = client
+            .request_raw(client.build_request(Method::GET, "").unwrap())
+            .await
+            .unwrap()
+            .error_for_status()
+            .unwrap_err();
+
+        assert_eq!(api_response_error(&error).status, StatusCode::NOT_FOUND);
+        assert!(ApiResponseError::has_error_code(&error, "notFound"));
         server.join().unwrap();
     }
 
