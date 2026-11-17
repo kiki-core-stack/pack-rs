@@ -1,1 +1,1 @@
-pub const TEST: &str = "tst8q0";
+pub const AUTH_SESSIONS_REVOKED: &str = "tsasrb0n";
